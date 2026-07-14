@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Poil pour Poil — Échange de garde d'animaux</title>
+<meta name="theme-color" content="#16332C" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #DCE4DE; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script>
+"use strict";
+const { useState } = React;
+// ---- Design tokens -------------------------------------------------
+const COLORS = {
+    forest: "#16332C",
+    forestSoft: "#264A40",
+    sage: "#E7EDE9",
+    sageDeep: "#CFDBD3",
+    gold: "#D9A441",
+    clay: "#B5563A",
+    cream: "#FAF9F5",
+    ink: "#1C2420",
+};
+const FONTS = {
+    display: "'Fraunces', Georgia, serif",
+    body: "'Work Sans', system-ui, sans-serif",
+    mono: "'IBM Plex Mono', monospace",
+};
+// ---- Minimal icon set (no external icon library needed) -----------
+const Icon = {
+    Paw: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: color },
+        React.createElement("circle", { cx: "7", cy: "9", r: "2.3" }),
+        React.createElement("circle", { cx: "12", cy: "6.3", r: "2.3" }),
+        React.createElement("circle", { cx: "17", cy: "9", r: "2.3" }),
+        React.createElement("ellipse", { cx: "12", cy: "15", rx: "5.5", ry: "4.5" }))),
+    Search: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "2", strokeLinecap: "round" },
+        React.createElement("circle", { cx: "10.5", cy: "10.5", r: "6.5" }),
+        React.createElement("line", { x1: "21", y1: "21", x2: "15.5", y2: "15.5" }))),
+    Chat: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "2", strokeLinejoin: "round" },
+        React.createElement("path", { d: "M4 5h16v11H8l-4 4V5z" }))),
+    User: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "2" },
+        React.createElement("circle", { cx: "12", cy: "8", r: "4" }),
+        React.createElement("path", { d: "M4 20c0-4 4-6 8-6s8 2 8 6" }))),
+    Pin: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: color },
+        React.createElement("path", { d: "M12 2C7.6 2 4 5.6 4 10c0 6 8 12 8 12s8-6 8-12c0-4.4-3.6-8-8-8z" }),
+        React.createElement("circle", { cx: "12", cy: "10", r: "2.6", fill: "white" }))),
+    Star: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: color },
+        React.createElement("polygon", { points: "12,2 15,9 22,9.5 16.5,14 18.5,21 12,17 5.5,21 7.5,14 2,9.5 9,9" }))),
+    Calendar: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "2" },
+        React.createElement("rect", { x: "3", y: "5", width: "18", height: "16", rx: "2" }),
+        React.createElement("line", { x1: "3", y1: "10", x2: "21", y2: "10" }),
+        React.createElement("line", { x1: "8", y1: "3", x2: "8", y2: "7" }),
+        React.createElement("line", { x1: "16", y1: "3", x2: "16", y2: "7" }))),
+    Swap: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "2", strokeLinecap: "round" },
+        React.createElement("path", { d: "M4 8h13M13 4l4 4-4 4" }),
+        React.createElement("path", { d: "M20 16H7M11 12l-4 4 4 4" }))),
+    Coin: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "2" },
+        React.createElement("circle", { cx: "12", cy: "12", r: "9" }),
+        React.createElement("circle", { cx: "12", cy: "12", r: "4.5" }))),
+    ChevronLeft: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+        React.createElement("polyline", { points: "15,4 7,12 15,20" }))),
+    Dog: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: color },
+        React.createElement("ellipse", { cx: "7", cy: "9", rx: "2.6", ry: "4", transform: "rotate(-20 7 9)" }),
+        React.createElement("ellipse", { cx: "17", cy: "9", rx: "2.6", ry: "4", transform: "rotate(20 17 9)" }),
+        React.createElement("circle", { cx: "12", cy: "13", r: "6" }))),
+    Cat: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: color },
+        React.createElement("polygon", { points: "6,10 9,3 11,10" }),
+        React.createElement("polygon", { points: "18,10 15,3 13,10" }),
+        React.createElement("circle", { cx: "12", cy: "13", r: "6" }))),
+    Bird: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: color },
+        React.createElement("circle", { cx: "10", cy: "10", r: "5" }),
+        React.createElement("polygon", { points: "15,10 21,8 15,12" }))),
+    Plus: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "2.4", strokeLinecap: "round" },
+        React.createElement("line", { x1: "12", y1: "4", x2: "12", y2: "20" }),
+        React.createElement("line", { x1: "4", y1: "12", x2: "20", y2: "12" }))),
+    Check: ({ size = 16, color = "currentColor" }) => (React.createElement("svg", { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: "3", strokeLinecap: "round", strokeLinejoin: "round" },
+        React.createElement("polyline", { points: "4,13 9,18 20,6" }))),
+};
+// ---- Mock data -------------------------------------------------------
+const SITTERS = [
+    { id: 1, name: "Camille", distance: "0,8 km", rating: 4.9, reviews: 27, pets: [Icon.Dog, Icon.Cat], mode: "reciprocal", tagline: "Jardin clos, 2 chats à la maison" },
+    { id: 2, name: "Idris", distance: "1,4 km", rating: 5.0, reviews: 12, pets: [Icon.Dog], mode: "credits", tagline: "Grand balcon, promenades quotidiennes" },
+    { id: 3, name: "Léa & Paul", distance: "2,1 km", rating: 4.7, reviews: 41, pets: [Icon.Bird, Icon.Cat], mode: "reciprocal", tagline: "Habitués des oiseaux et NAC" },
+];
+function DogCatDuo() {
+    return (React.createElement("svg", { viewBox: "0 0 200 80", width: "100%", height: "100%", style: { display: "block" } },
+        React.createElement("polygon", { points: "30,26 40,4 46,28", fill: COLORS.gold }),
+        React.createElement("polygon", { points: "70,26 60,4 54,28", fill: COLORS.gold }),
+        React.createElement("circle", { cx: "50", cy: "44", r: "24", fill: COLORS.gold }),
+        React.createElement("circle", { cx: "42", cy: "42", r: "2.4", fill: COLORS.forest }),
+        React.createElement("circle", { cx: "58", cy: "42", r: "2.4", fill: COLORS.forest }),
+        React.createElement("polygon", { points: "50,48 46,52 54,52", fill: COLORS.forest }),
+        React.createElement("ellipse", { cx: "122", cy: "40", rx: "10", ry: "18", fill: COLORS.cream, transform: "rotate(-16 122 40)" }),
+        React.createElement("ellipse", { cx: "178", cy: "40", rx: "10", ry: "18", fill: COLORS.cream, transform: "rotate(16 178 40)" }),
+        React.createElement("circle", { cx: "150", cy: "44", r: "24", fill: COLORS.cream }),
+        React.createElement("circle", { cx: "142", cy: "42", r: "2.4", fill: COLORS.forest }),
+        React.createElement("circle", { cx: "158", cy: "42", r: "2.4", fill: COLORS.forest }),
+        React.createElement("ellipse", { cx: "150", cy: "52", rx: "4.2", ry: "3.2", fill: COLORS.forest })));
+}
+const SIZE_COEF = { XS: 0.7, S: 1.0, M: 1.3, L: 1.6, XL: 2.0 };
+const SIZE_HINT = { XS: "<5kg", S: "5–15kg", M: "15–30kg", L: "30–45kg", XL: ">45kg" };
+const CARE_COEF = { visite: 0.3, jour: 1.0, nuit: 1.4 };
+const CARE_LABELS = { visite: "Visite courte", jour: "Journée", nuit: "Avec nuitée" };
+function estimatePoints(size, care, special) {
+    return +(SIZE_COEF[size] * CARE_COEF[care] + (special ? 0.4 : 0)).toFixed(1);
+}
+function Chip({ children, tone = "forest" }) {
+    const bg = tone === "gold" ? COLORS.gold : tone === "clay" ? COLORS.clay : COLORS.forest;
+    return (React.createElement("span", { style: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.4, textTransform: "uppercase", color: COLORS.cream, background: bg, borderRadius: 999, padding: "4px 10px", display: "inline-flex", alignItems: "center", gap: 4 } }, children));
+}
+function SitterCard({ sitter, onOpen }) {
+    return (React.createElement("button", { onClick: () => onOpen(sitter), style: { textAlign: "left", width: "100%", background: COLORS.cream, border: `1px solid ${COLORS.sageDeep}`, borderRadius: 18, padding: 14, display: "flex", gap: 12, cursor: "pointer", fontFamily: FONTS.body } },
+        React.createElement("div", { style: { width: 56, height: 56, borderRadius: 14, background: COLORS.forest, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.gold, fontFamily: FONTS.display, fontSize: 22, fontWeight: 600 } }, sitter.name[0]),
+        React.createElement("div", { style: { flex: 1, minWidth: 0 } },
+            React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
+                React.createElement("span", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 16, color: COLORS.ink } }, sitter.name),
+                React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 3, fontFamily: FONTS.mono, fontSize: 12, color: COLORS.ink } },
+                    React.createElement(Icon.Star, { size: 12, color: COLORS.gold }),
+                    " ",
+                    sitter.rating,
+                    " \u00B7 ",
+                    sitter.reviews)),
+            React.createElement("div", { style: { fontSize: 13, color: "#5B655F", marginTop: 2 } }, sitter.tagline),
+            React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginTop: 8, flexWrap: "wrap" } },
+                React.createElement("span", { style: { display: "flex", alignItems: "center", gap: 3, fontSize: 12, color: COLORS.forestSoft } },
+                    React.createElement(Icon.Pin, { size: 12, color: COLORS.forestSoft }),
+                    " ",
+                    sitter.distance),
+                sitter.pets.map((I, i) => React.createElement(I, { key: i, size: 14, color: COLORS.forestSoft })),
+                React.createElement(Chip, { tone: sitter.mode === "credits" ? "gold" : "clay" },
+                    sitter.mode === "credits" ? React.createElement(Icon.Coin, { size: 11, color: COLORS.cream }) : React.createElement(Icon.Swap, { size: 11, color: COLORS.cream }),
+                    sitter.mode === "credits" ? "Crédits" : "Réciproque")))));
+}
+function HomeScreen({ onSearch }) {
+    return (React.createElement("div", { style: { padding: "20px 18px 90px" } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 18 } },
+            React.createElement(Icon.Paw, { size: 22, color: COLORS.forest }),
+            React.createElement("span", { style: { fontFamily: FONTS.display, fontWeight: 700, fontSize: 20, color: COLORS.forest } }, "Poil pour Poil")),
+        React.createElement("div", { style: { background: COLORS.forest, borderRadius: 22, padding: "18px 18px 20px", color: COLORS.cream, marginBottom: 20, display: "flex", alignItems: "center", gap: 16 } },
+            React.createElement("div", { style: { width: 64, flexShrink: 0 } },
+                React.createElement(DogCatDuo, null)),
+            React.createElement("div", null,
+                React.createElement("div", { style: { fontFamily: FONTS.mono, fontSize: 10.5, letterSpacing: 1, color: COLORS.gold, textTransform: "uppercase" } }, "Poil pour Poil"),
+                React.createElement("h1", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 18, lineHeight: 1.2, margin: "4px 0 0" } }, "Un \u00E9change de confiance, pas de facture."))),
+        React.createElement("button", { onClick: onSearch, style: { width: "100%", display: "flex", alignItems: "center", gap: 10, background: COLORS.cream, border: `1.5px solid ${COLORS.sageDeep}`, borderRadius: 16, padding: "14px 16px", fontFamily: FONTS.body, fontSize: 14, color: "#5B655F", marginBottom: 22, cursor: "pointer" } },
+            React.createElement(Icon.Search, { size: 16, color: COLORS.forest }),
+            " Trouver un gardien pr\u00E8s de chez toi"),
+        React.createElement("div", { style: { display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 } },
+            React.createElement("span", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 16, color: COLORS.ink } }, "Suggestions autour de toi"),
+            React.createElement("span", { style: { fontFamily: FONTS.mono, fontSize: 11, color: COLORS.forestSoft } }, "3 disponibles")),
+        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, SITTERS.map((s) => React.createElement(SitterCard, { key: s.id, sitter: s, onOpen: onSearch })))));
+}
+function SearchScreen({ onOpenSitter, onBack }) {
+    return (React.createElement("div", { style: { padding: "20px 18px 90px" } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, marginBottom: 16 } },
+            React.createElement("button", { onClick: onBack, style: { background: "none", border: "none", cursor: "pointer", padding: 4 } },
+                React.createElement(Icon.ChevronLeft, { size: 20, color: COLORS.forest })),
+            React.createElement("span", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 18, color: COLORS.ink } }, "Gardiens \u00E0 proximit\u00E9")),
+        React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" } }, ["Tous", "Chiens", "Chats", "NAC", "Réciproque", "Crédits"].map((f, i) => (React.createElement("span", { key: f, style: { fontFamily: FONTS.mono, fontSize: 11.5, padding: "6px 12px", borderRadius: 999, border: `1px solid ${i === 0 ? COLORS.forest : COLORS.sageDeep}`, background: i === 0 ? COLORS.forest : "transparent", color: i === 0 ? COLORS.cream : COLORS.forestSoft } }, f)))),
+        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, SITTERS.map((s) => React.createElement(SitterCard, { key: s.id, sitter: s, onOpen: onOpenSitter })))));
+}
+function SitterProfileScreen({ sitter, onBack, onRequest }) {
+    return (React.createElement("div", { style: { padding: "20px 18px 90px" } },
+        React.createElement("button", { onClick: onBack, style: { background: "none", border: "none", cursor: "pointer", padding: 4, marginBottom: 14 } },
+            React.createElement(Icon.ChevronLeft, { size: 20, color: COLORS.forest })),
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14, marginBottom: 16 } },
+            React.createElement("div", { style: { width: 64, height: 64, borderRadius: 18, background: COLORS.forest, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.gold, fontFamily: FONTS.display, fontSize: 26, fontWeight: 600 } }, sitter.name[0]),
+            React.createElement("div", null,
+                React.createElement("div", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 20, color: COLORS.ink } }, sitter.name),
+                React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 4, fontSize: 13, color: "#5B655F" } },
+                    React.createElement(Icon.Pin, { size: 13, color: "#5B655F" }),
+                    " ",
+                    sitter.distance,
+                    " \u00B7 ",
+                    React.createElement(Icon.Star, { size: 13, color: COLORS.gold }),
+                    " ",
+                    sitter.rating))),
+        React.createElement("p", { style: { fontFamily: FONTS.body, fontSize: 14, color: "#3A423D", lineHeight: 1.5, marginBottom: 18 } },
+            sitter.tagline,
+            ". Disponible la plupart des week-ends, \u00E0 l'aise avec les animaux anxieux. Habite un rez-de-jardin sans danger."),
+        React.createElement("div", { style: { background: COLORS.sage, borderRadius: 16, padding: 14, marginBottom: 18, display: "flex", alignItems: "center", gap: 10 } },
+            sitter.mode === "credits" ? React.createElement(Icon.Coin, { size: 18, color: COLORS.gold }) : React.createElement(Icon.Swap, { size: 18, color: COLORS.clay }),
+            React.createElement("div", { style: { fontFamily: FONTS.body, fontSize: 13, color: COLORS.ink } }, sitter.mode === "credits" ? "Accepte les crédits — pas besoin d'échange en retour immédiat." : "Préfère l'échange réciproque — proposez une garde en retour.")),
+        React.createElement("div", { style: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: COLORS.forestSoft, marginBottom: 8 } }, "Prochaines disponibilit\u00E9s"),
+        React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 22, flexWrap: "wrap" } }, ["Ven 18", "Sam 19", "Dim 20", "Ven 25"].map((d) => (React.createElement("span", { key: d, style: { fontFamily: FONTS.mono, fontSize: 12, padding: "6px 10px", borderRadius: 10, border: `1px solid ${COLORS.sageDeep}`, color: COLORS.ink } },
+            React.createElement(Icon.Calendar, { size: 11, color: COLORS.ink }),
+            " ",
+            d)))),
+        React.createElement("button", { onClick: onRequest, style: { width: "100%", background: COLORS.forest, color: COLORS.cream, border: "none", borderRadius: 14, padding: "14px 0", fontFamily: FONTS.body, fontWeight: 600, fontSize: 15, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 } },
+            React.createElement(Icon.Paw, { size: 16, color: COLORS.cream }),
+            " Proposer un \u00E9change")));
+}
+function RequestSentScreen({ sitter, onBack }) {
+    return (React.createElement("div", { style: { padding: "60px 26px 90px", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" } },
+        React.createElement("div", { style: { width: 72, height: 72, borderRadius: "50%", background: COLORS.gold, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 } },
+            React.createElement(Icon.Check, { size: 32, color: COLORS.forest })),
+        React.createElement("h2", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 22, color: COLORS.ink, margin: "0 0 8px" } },
+            "Demande envoy\u00E9e \u00E0 ",
+            sitter.name),
+        React.createElement("p", { style: { fontFamily: FONTS.body, fontSize: 14, color: "#5B655F", lineHeight: 1.5, marginBottom: 26 } },
+            sitter.name,
+            " recevra une notification et pourra accepter ou proposer d'autres dates. Tu seras pr\u00E9venu\u00B7e d\u00E8s sa r\u00E9ponse."),
+        React.createElement("button", { onClick: onBack, style: { background: "none", border: `1.5px solid ${COLORS.forest}`, color: COLORS.forest, borderRadius: 14, padding: "12px 22px", fontFamily: FONTS.body, fontWeight: 600, fontSize: 14, cursor: "pointer" } }, "Retour \u00E0 l'accueil")));
+}
+function ExchangesScreen() {
+    const items = [
+        { name: "Camille", status: "En attente", date: "18–19 juil." },
+        { name: "Idris", status: "Confirmé", date: "25 juil." },
+    ];
+    return (React.createElement("div", { style: { padding: "20px 18px 90px" } },
+        React.createElement("span", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 18, color: COLORS.ink } }, "Mes \u00E9changes"),
+        React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.sage, borderRadius: 14, padding: "12px 14px", margin: "16px 0" } },
+            React.createElement("span", { style: { fontFamily: FONTS.mono, fontSize: 12, color: COLORS.forestSoft, textTransform: "uppercase" } }, "Solde de cr\u00E9dits"),
+            React.createElement("span", { style: { fontFamily: FONTS.display, fontWeight: 700, fontSize: 18, color: COLORS.forest, display: "flex", gap: 4, alignItems: "center" } },
+                React.createElement(Icon.Coin, { size: 16, color: COLORS.gold }),
+                " 4,5")),
+        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } }, items.map((it) => (React.createElement("div", { key: it.name, style: { display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.cream, border: `1px solid ${COLORS.sageDeep}`, borderRadius: 16, padding: 14 } },
+            React.createElement("div", null,
+                React.createElement("div", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 15, color: COLORS.ink } }, it.name),
+                React.createElement("div", { style: { fontFamily: FONTS.mono, fontSize: 11.5, color: "#5B655F", marginTop: 2 } }, it.date)),
+            React.createElement(Chip, { tone: it.status === "Confirmé" ? "forest" : "clay" }, it.status)))))));
+}
+function PointsSimulator() {
+    const [size, setSize] = useState("M");
+    const [care, setCare] = useState("jour");
+    const [special, setSpecial] = useState(false);
+    const pts = estimatePoints(size, care, special);
+    return (React.createElement("div", { style: { background: COLORS.cream, border: `1px solid ${COLORS.sageDeep}`, borderRadius: 16, padding: 14, marginBottom: 22 } },
+        React.createElement("div", { style: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: COLORS.forestSoft, marginBottom: 10 } }, "Simulateur de points"),
+        React.createElement("div", { style: { fontSize: 12, color: "#5B655F", marginBottom: 6 } }, "Gabarit de l'animal"),
+        React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" } }, Object.keys(SIZE_COEF).map((k) => (React.createElement("button", { key: k, onClick: () => setSize(k), style: { fontFamily: FONTS.mono, fontSize: 11, padding: "6px 9px", borderRadius: 10, border: `1px solid ${size === k ? COLORS.forest : COLORS.sageDeep}`, background: size === k ? COLORS.forest : "transparent", color: size === k ? COLORS.cream : COLORS.ink, cursor: "pointer" } },
+            k,
+            " ",
+            React.createElement("span", { style: { opacity: 0.75 } }, SIZE_HINT[k]))))),
+        React.createElement("div", { style: { fontSize: 12, color: "#5B655F", marginBottom: 6 } }, "Type de garde"),
+        React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" } }, Object.keys(CARE_COEF).map((k) => (React.createElement("button", { key: k, onClick: () => setCare(k), style: { fontFamily: FONTS.mono, fontSize: 11, padding: "6px 9px", borderRadius: 10, border: `1px solid ${care === k ? COLORS.forest : COLORS.sageDeep}`, background: care === k ? COLORS.forest : "transparent", color: care === k ? COLORS.cream : COLORS.ink, cursor: "pointer" } }, CARE_LABELS[k])))),
+        React.createElement("button", { onClick: () => setSpecial((s) => !s), style: { display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", padding: 0, marginBottom: 14, cursor: "pointer", fontFamily: FONTS.body, fontSize: 12.5, color: COLORS.ink } },
+            React.createElement("span", { style: { width: 16, height: 16, borderRadius: 5, border: `1.5px solid ${COLORS.forest}`, background: special ? COLORS.forest : "transparent", display: "flex", alignItems: "center", justifyContent: "center" } }, special && React.createElement(Icon.Check, { size: 11, color: COLORS.cream })),
+            "Besoin m\u00E9dical ou comportemental particulier"),
+        React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", background: COLORS.sage, borderRadius: 12, padding: "10px 14px" } },
+            React.createElement("span", { style: { fontFamily: FONTS.mono, fontSize: 11, color: COLORS.forestSoft, textTransform: "uppercase" } }, "Points estim\u00E9s"),
+            React.createElement("span", { style: { fontFamily: FONTS.display, fontWeight: 700, fontSize: 20, color: COLORS.forest, display: "flex", gap: 4, alignItems: "center" } },
+                React.createElement(Icon.Coin, { size: 16, color: COLORS.gold }),
+                " ",
+                pts))));
+}
+function ProfileScreen() {
+    return (React.createElement("div", { style: { padding: "20px 18px 90px" } },
+        React.createElement("span", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 18, color: COLORS.ink } }, "Mon profil"),
+        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14, margin: "18px 0 22px" } },
+            React.createElement("div", { style: { width: 60, height: 60, borderRadius: 16, background: COLORS.forest, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.gold, fontFamily: FONTS.display, fontSize: 24 } }, "T"),
+            React.createElement("div", null,
+                React.createElement("div", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 17 } }, "Toi"),
+                React.createElement("div", { style: { fontSize: 12.5, color: "#5B655F" } }, "Nantes \u00B7 Membre depuis juil. 2026"))),
+        React.createElement("div", { style: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: COLORS.forestSoft, marginBottom: 8 } }, "Mes animaux"),
+        React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 20 } },
+            React.createElement("div", { style: { background: COLORS.cream, border: `1px solid ${COLORS.sageDeep}`, borderRadius: 14, padding: 12, flex: 1, textAlign: "center" } },
+                React.createElement(Icon.Dog, { size: 20, color: COLORS.forest }),
+                React.createElement("div", { style: { fontSize: 12.5, fontFamily: FONTS.body, marginTop: 4 } }, "Biscotte")),
+            React.createElement("button", { style: { background: "none", border: `1.5px dashed ${COLORS.sageDeep}`, borderRadius: 14, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, color: COLORS.forestSoft, cursor: "pointer" } },
+                React.createElement(Icon.Plus, { size: 18, color: COLORS.forestSoft }),
+                React.createElement("span", { style: { fontSize: 11.5, fontFamily: FONTS.body } }, "Ajouter"))),
+        React.createElement(PointsSimulator, null),
+        React.createElement("div", { style: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: COLORS.forestSoft, marginBottom: 8 } }, "Pr\u00E9f\u00E9rences d'\u00E9change"),
+        React.createElement("div", { style: { display: "flex", gap: 8 } },
+            React.createElement(Chip, { tone: "clay" },
+                React.createElement(Icon.Swap, { size: 11, color: COLORS.cream }),
+                " R\u00E9ciproque"),
+            React.createElement(Chip, { tone: "gold" },
+                React.createElement(Icon.Coin, { size: 11, color: COLORS.cream }),
+                " Cr\u00E9dits"))));
+}
+function TabBar({ active, onChange }) {
+    const tabs = [
+        { key: "home", label: "Accueil", icon: Icon.Paw },
+        { key: "search", label: "Recherche", icon: Icon.Search },
+        { key: "exchanges", label: "Échanges", icon: Icon.Chat },
+        { key: "profile", label: "Profil", icon: Icon.User },
+    ];
+    return (React.createElement("div", { style: { position: "absolute", bottom: 0, left: 0, right: 0, background: COLORS.cream, borderTop: `1px solid ${COLORS.sageDeep}`, display: "flex", padding: "10px 6px 14px" } }, tabs.map((t) => {
+        const I = t.icon;
+        const isActive = active === t.key;
+        return (React.createElement("button", { key: t.key, onClick: () => onChange(t.key), style: { flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", color: isActive ? COLORS.forest : "#9AA69E" } },
+            React.createElement(I, { size: 19, color: isActive ? COLORS.forest : "#9AA69E" }),
+            React.createElement("span", { style: { fontFamily: FONTS.mono, fontSize: 10 } }, t.label)));
+    })));
+}
+function App() {
+    const [tab, setTab] = useState("home");
+    const [view, setView] = useState("home");
+    const [selectedSitter, setSelectedSitter] = useState(null);
+    const goTab = (key) => { setTab(key); setView(key === "home" ? "home" : key === "search" ? "search" : key); };
+    let content;
+    if (tab === "exchanges")
+        content = React.createElement(ExchangesScreen, null);
+    else if (tab === "profile")
+        content = React.createElement(ProfileScreen, null);
+    else if (view === "search") {
+        content = React.createElement(SearchScreen, { onBack: () => { setTab("home"); setView("home"); }, onOpenSitter: (s) => { setSelectedSitter(s); setView("sitterProfile"); } });
+    }
+    else if (view === "sitterProfile") {
+        content = React.createElement(SitterProfileScreen, { sitter: selectedSitter, onBack: () => setView("search"), onRequest: () => setView("requestSent") });
+    }
+    else if (view === "requestSent") {
+        content = React.createElement(RequestSentScreen, { sitter: selectedSitter, onBack: () => { setTab("home"); setView("home"); } });
+    }
+    else {
+        content = React.createElement(HomeScreen, { onSearch: () => { setTab("search"); setView("search"); } });
+    }
+    return (React.createElement("div", { style: { minHeight: "100vh", background: "#DCE4DE", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: FONTS.body } },
+        React.createElement("div", { style: { width: 390, maxWidth: "100%", height: 780, maxHeight: "90vh", background: COLORS.sage, borderRadius: 40, border: `8px solid ${COLORS.ink}`, position: "relative", overflow: "hidden", boxShadow: "0 30px 60px rgba(22,51,44,0.35)" } },
+            React.createElement("div", { style: { height: "100%", overflowY: "auto" } }, content),
+            React.createElement(TabBar, { active: tab, onChange: goTab }))));
+}
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App, null));
+
+</script>
+</body>
+</html>
