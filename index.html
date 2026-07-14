@@ -11,6 +11,8 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: #E7EDE9; }
   #root { height: 100%; }
+  input, textarea { font-family: inherit; outline: none; }
+  input:focus, textarea:focus { border-color: #16332C !important; }
 
   .app-shell {
     min-height: 100vh;
@@ -30,8 +32,6 @@
     flex-direction: column;
   }
 
-  /* Sur desktop uniquement : légère mise en valeur de la colonne,
-     sans imiter un boîtier de téléphone */
   @media (min-width: 481px) {
     .app-shell { background: #DCE4DE; padding: 24px 0; }
     .phone-frame {
@@ -48,9 +48,14 @@
 
 <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 "use strict";
-const { useState } = React;
+const { useState, useEffect } = React;
+// ---- Connexion Supabase ---------------------------------------------
+const SUPABASE_URL = "https://amffngacmihyfxrvxwdb.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFtZmZuZ2FjbWloeWZ4cnZ4d2RiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwMzk0NTUsImV4cCI6MjA5OTYxNTQ1NX0.UMPKEeT-iS1jxQgzqZvT4lkN68thlSK_bFyP_TwKpKE";
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 // ---- Design tokens -------------------------------------------------
 const COLORS = {
     forest: "#16332C",
@@ -285,31 +290,174 @@ function PointsSimulator() {
                 " ",
                 pts))));
 }
+const SPECIES_ICON = { chien: Icon.Dog, chat: Icon.Cat, oiseau: Icon.Bird, rongeur: Icon.Paw, autre: Icon.Paw };
+const SPECIES_LABEL = { chien: "Chien", chat: "Chat", oiseau: "Oiseau", rongeur: "Rongeur", autre: "Autre" };
+const inputStyle = { width: "100%", padding: "11px 13px", borderRadius: 12, border: `1px solid ${COLORS.sageDeep}`, fontFamily: FONTS.body, fontSize: 13, marginBottom: 8, display: "block" };
+function pillStyle(active) {
+    return { fontFamily: FONTS.mono, fontSize: 11, padding: "6px 10px", borderRadius: 10, border: `1px solid ${active ? COLORS.forest : COLORS.sageDeep}`, background: active ? COLORS.forest : "transparent", color: active ? COLORS.cream : COLORS.ink, cursor: "pointer" };
+}
+async function uploadPhoto(userId, file, subfolder) {
+    const ext = file.name.split(".").pop();
+    const path = `${userId}/${subfolder}/${Date.now()}.${ext}`;
+    const { error } = await supabaseClient.storage.from("photos").upload(path, file, { upsert: true });
+    if (error)
+        throw error;
+    const { data } = supabaseClient.storage.from("photos").getPublicUrl(path);
+    return data.publicUrl;
+}
+function AuthGate() {
+    const [email, setEmail] = useState("");
+    const [sent, setSent] = useState(false);
+    const [error, setError] = useState(null);
+    const sendLink = async () => {
+        setError(null);
+        const { error } = await supabaseClient.auth.signInWithOtp({ email, options: { emailRedirectTo: window.location.href } });
+        if (error)
+            setError(error.message);
+        else
+            setSent(true);
+    };
+    return (React.createElement("div", { style: { padding: "20px 18px" } },
+        React.createElement("span", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 18, color: COLORS.ink } }, "Connexion"),
+        React.createElement("p", { style: { fontFamily: FONTS.body, fontSize: 13, color: "#5B655F", margin: "10px 0 16px" } }, "Entre ton email, tu recevras un lien de connexion \u2014 pas besoin de mot de passe."),
+        sent ? (React.createElement("div", { style: { background: COLORS.sage, borderRadius: 12, padding: 14, fontFamily: FONTS.body, fontSize: 13, color: COLORS.ink } }, "V\u00E9rifie ta bo\u00EEte mail et clique sur le lien re\u00E7u pour te connecter.")) : (React.createElement("div", null,
+            React.createElement("input", { type: "email", value: email, onChange: (e) => setEmail(e.target.value), placeholder: "ton@email.com", style: inputStyle }),
+            error && React.createElement("div", { style: { color: COLORS.clay, fontSize: 12, marginBottom: 10 } }, error),
+            React.createElement("button", { onClick: sendLink, disabled: !email, style: { width: "100%", background: COLORS.forest, color: COLORS.cream, border: "none", borderRadius: 14, padding: "13px 0", fontFamily: FONTS.body, fontWeight: 600, fontSize: 14, cursor: "pointer" } }, "Recevoir le lien de connexion")))));
+}
+function AddPetForm({ userId, onAdded, onCancel }) {
+    const [name, setName] = useState("");
+    const [species, setSpecies] = useState("chien");
+    const [size, setSize] = useState("M");
+    const [weight, setWeight] = useState("");
+    const [needs, setNeeds] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState(null);
+    const save = async () => {
+        if (!name)
+            return;
+        setSaving(true);
+        setError(null);
+        const { data, error } = await supabaseClient.from("pets").insert({
+            owner_id: userId,
+            name,
+            species,
+            size_category: size,
+            weight_kg: weight ? parseFloat(weight) : null,
+            special_needs: needs || null,
+        }).select().single();
+        setSaving(false);
+        if (error)
+            setError(error.message);
+        else
+            onAdded(data);
+    };
+    return (React.createElement("div", { style: { background: COLORS.cream, border: `1px solid ${COLORS.sageDeep}`, borderRadius: 16, padding: 14, marginBottom: 20 } },
+        React.createElement("div", { style: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: COLORS.forestSoft, marginBottom: 10 } }, "Nouvel animal"),
+        React.createElement("input", { placeholder: "Nom", value: name, onChange: (e) => setName(e.target.value), style: inputStyle }),
+        React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" } }, Object.keys(SPECIES_LABEL).map((k) => (React.createElement("button", { key: k, onClick: () => setSpecies(k), style: pillStyle(species === k) }, SPECIES_LABEL[k])))),
+        React.createElement("div", { style: { display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap" } }, Object.keys(SIZE_COEF).map((k) => (React.createElement("button", { key: k, onClick: () => setSize(k), style: pillStyle(size === k) }, k)))),
+        React.createElement("input", { placeholder: "Poids en kg (optionnel)", value: weight, onChange: (e) => setWeight(e.target.value), style: inputStyle }),
+        React.createElement("textarea", { placeholder: "Besoins particuliers (optionnel)", value: needs, onChange: (e) => setNeeds(e.target.value), style: { ...inputStyle, minHeight: 60, resize: "vertical" } }),
+        error && React.createElement("div", { style: { color: COLORS.clay, fontSize: 12, marginBottom: 8 } }, error),
+        React.createElement("div", { style: { display: "flex", gap: 8 } },
+            React.createElement("button", { onClick: onCancel, style: { flex: 1, background: "none", border: `1px solid ${COLORS.sageDeep}`, borderRadius: 12, padding: "10px 0", fontFamily: FONTS.body, cursor: "pointer" } }, "Annuler"),
+            React.createElement("button", { onClick: save, disabled: saving || !name, style: { flex: 1, background: COLORS.forest, color: COLORS.cream, border: "none", borderRadius: 12, padding: "10px 0", fontFamily: FONTS.body, fontWeight: 600, cursor: "pointer" } }, saving ? "…" : "Ajouter"))));
+}
 function ProfileScreen() {
-    return (React.createElement("div", { style: { padding: "20px 18px 90px" } },
-        React.createElement("span", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 18, color: COLORS.ink } }, "Mon profil"),
+    const [session, setSession] = useState(undefined);
+    const [profile, setProfile] = useState(null);
+    const [pets, setPets] = useState([]);
+    const [editingName, setEditingName] = useState(false);
+    const [nameDraft, setNameDraft] = useState("");
+    const [showAddPet, setShowAddPet] = useState(false);
+    const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    useEffect(() => {
+        supabaseClient.auth.getSession().then(({ data }) => setSession(data.session || null));
+        const { data: sub } = supabaseClient.auth.onAuthStateChange((_event, s) => setSession(s));
+        return () => sub.subscription.unsubscribe();
+    }, []);
+    useEffect(() => {
+        if (!session)
+            return;
+        const uid = session.user.id;
+        (async () => {
+            let { data: prof } = await supabaseClient.from("profiles").select("*").eq("id", uid).maybeSingle();
+            if (!prof) {
+                const { data: created } = await supabaseClient.from("profiles").insert({
+                    id: uid,
+                    full_name: session.user.email.split("@")[0],
+                }).select().single();
+                prof = created;
+            }
+            setProfile(prof);
+            setNameDraft((prof && prof.full_name) || "");
+            const { data: petRows } = await supabaseClient.from("pets").select("*").eq("owner_id", uid).order("created_at");
+            setPets(petRows || []);
+        })();
+    }, [session]);
+    if (session === undefined) {
+        return React.createElement("div", { style: { padding: 40, textAlign: "center", fontFamily: FONTS.body, color: COLORS.forestSoft } }, "Chargement\u2026");
+    }
+    if (!session) {
+        return React.createElement(AuthGate, null);
+    }
+    const uid = session.user.id;
+    const saveName = async () => {
+        const { data } = await supabaseClient.from("profiles").update({ full_name: nameDraft }).eq("id", uid).select().single();
+        setProfile(data);
+        setEditingName(false);
+    };
+    const onAvatarChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file)
+            return;
+        setUploadingAvatar(true);
+        try {
+            const url = await uploadPhoto(uid, file, "avatar");
+            const { data } = await supabaseClient.from("profiles").update({ avatar_url: url }).eq("id", uid).select().single();
+            setProfile(data);
+        }
+        catch (err) {
+            alert("Erreur d'envoi : " + err.message);
+        }
+        setUploadingAvatar(false);
+    };
+    const signOut = async () => { await supabaseClient.auth.signOut(); };
+    return (React.createElement("div", { style: { padding: "20px 18px 40px" } },
+        React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between" } },
+            React.createElement("span", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 18, color: COLORS.ink } }, "Mon profil"),
+            React.createElement("button", { onClick: signOut, style: { background: "none", border: "none", fontFamily: FONTS.mono, fontSize: 11, color: COLORS.forestSoft, cursor: "pointer" } }, "D\u00E9connexion")),
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14, margin: "18px 0 22px" } },
-            React.createElement("div", { style: { width: 60, height: 60, borderRadius: 16, background: COLORS.forest, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.gold, fontFamily: FONTS.display, fontSize: 24 } }, "T"),
-            React.createElement("div", null,
-                React.createElement("div", { style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 17 } }, "Toi"),
-                React.createElement("div", { style: { fontSize: 12.5, color: "#5B655F" } }, "Nantes \u00B7 Membre depuis juil. 2026"))),
+            React.createElement("label", { style: { position: "relative", cursor: "pointer" } },
+                React.createElement("div", { style: { width: 60, height: 60, borderRadius: 16, background: COLORS.forest, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", color: COLORS.gold, fontFamily: FONTS.display, fontSize: 24 } }, profile && profile.avatar_url ? (React.createElement("img", { src: profile.avatar_url, alt: "", style: { width: "100%", height: "100%", objectFit: "cover" } })) : (((profile && profile.full_name) || "?")[0].toUpperCase())),
+                React.createElement("input", { type: "file", accept: "image/*", onChange: onAvatarChange, style: { display: "none" } }),
+                React.createElement("div", { style: { position: "absolute", bottom: -4, right: -4, background: COLORS.gold, borderRadius: "50%", width: 20, height: 20, display: "flex", alignItems: "center", justifyContent: "center" } },
+                    React.createElement(Icon.Plus, { size: 12, color: COLORS.forest }))),
+            React.createElement("div", { style: { flex: 1 } },
+                editingName ? (React.createElement("div", { style: { display: "flex", gap: 6 } },
+                    React.createElement("input", { value: nameDraft, onChange: (e) => setNameDraft(e.target.value), style: { ...inputStyle, marginBottom: 0, flex: 1 } }),
+                    React.createElement("button", { onClick: saveName, style: { background: COLORS.forest, color: COLORS.cream, border: "none", borderRadius: 10, padding: "0 12px", cursor: "pointer" } },
+                        React.createElement(Icon.Check, { size: 14, color: COLORS.cream })))) : (React.createElement("div", { onClick: () => setEditingName(true), style: { fontFamily: FONTS.display, fontWeight: 600, fontSize: 17, cursor: "pointer" } },
+                    profile && profile.full_name,
+                    " ",
+                    React.createElement("span", { style: { fontSize: 11, color: COLORS.forestSoft, fontFamily: FONTS.mono } }, "modifier"))),
+                React.createElement("div", { style: { fontSize: 12.5, color: "#5B655F" } }, session.user.email))),
+        uploadingAvatar && React.createElement("div", { style: { fontSize: 12, color: COLORS.forestSoft, marginBottom: 10 } }, "Envoi de la photo\u2026"),
         React.createElement("div", { style: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: COLORS.forestSoft, marginBottom: 8 } }, "Mes animaux"),
-        React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 20 } },
-            React.createElement("div", { style: { background: COLORS.cream, border: `1px solid ${COLORS.sageDeep}`, borderRadius: 14, padding: 12, flex: 1, textAlign: "center" } },
-                React.createElement(Icon.Dog, { size: 20, color: COLORS.forest }),
-                React.createElement("div", { style: { fontSize: 12.5, fontFamily: FONTS.body, marginTop: 4 } }, "Biscotte")),
-            React.createElement("button", { style: { background: "none", border: `1.5px dashed ${COLORS.sageDeep}`, borderRadius: 14, flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, color: COLORS.forestSoft, cursor: "pointer" } },
+        React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" } },
+            pets.map((p) => {
+                const PIcon = SPECIES_ICON[p.species] || Icon.Paw;
+                return (React.createElement("div", { key: p.id, style: { background: COLORS.cream, border: `1px solid ${COLORS.sageDeep}`, borderRadius: 14, padding: 12, width: 84, textAlign: "center" } },
+                    p.photo_url ? (React.createElement("img", { src: p.photo_url, alt: "", style: { width: 32, height: 32, borderRadius: "50%", objectFit: "cover", margin: "0 auto" } })) : (React.createElement(PIcon, { size: 20, color: COLORS.forest })),
+                    React.createElement("div", { style: { fontSize: 12.5, fontFamily: FONTS.body, marginTop: 4 } }, p.name),
+                    React.createElement("div", { style: { fontSize: 10, fontFamily: FONTS.mono, color: COLORS.forestSoft } }, p.size_category || "?")));
+            }),
+            React.createElement("button", { onClick: () => setShowAddPet(true), style: { background: "none", border: `1.5px dashed ${COLORS.sageDeep}`, borderRadius: 14, width: 84, height: 84, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4, color: COLORS.forestSoft, cursor: "pointer" } },
                 React.createElement(Icon.Plus, { size: 18, color: COLORS.forestSoft }),
                 React.createElement("span", { style: { fontSize: 11.5, fontFamily: FONTS.body } }, "Ajouter"))),
-        React.createElement(PointsSimulator, null),
-        React.createElement("div", { style: { fontFamily: FONTS.mono, fontSize: 11, letterSpacing: 0.6, textTransform: "uppercase", color: COLORS.forestSoft, marginBottom: 8 } }, "Pr\u00E9f\u00E9rences d'\u00E9change"),
-        React.createElement("div", { style: { display: "flex", gap: 8 } },
-            React.createElement(Chip, { tone: "clay" },
-                React.createElement(Icon.Swap, { size: 11, color: COLORS.cream }),
-                " R\u00E9ciproque"),
-            React.createElement(Chip, { tone: "gold" },
-                React.createElement(Icon.Coin, { size: 11, color: COLORS.cream }),
-                " Cr\u00E9dits"))));
+        showAddPet && (React.createElement(AddPetForm, { userId: uid, onCancel: () => setShowAddPet(false), onAdded: (pet) => { setPets((prev) => [...prev, pet]); setShowAddPet(false); } })),
+        React.createElement(PointsSimulator, null)));
 }
 function TabBar({ active, onChange }) {
     const tabs = [
