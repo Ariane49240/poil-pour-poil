@@ -9,7 +9,38 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Work+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; background: #DCE4DE; }
+  html, body { margin: 0; height: 100%; background: #E7EDE9; }
+  #root { height: 100%; }
+
+  .app-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: #E7EDE9;
+    display: flex;
+    justify-content: center;
+  }
+
+  .phone-frame {
+    width: 100%;
+    max-width: 480px;
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: #E7EDE9;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Sur desktop uniquement : légère mise en valeur de la colonne,
+     sans imiter un boîtier de téléphone */
+  @media (min-width: 481px) {
+    .app-shell { background: #DCE4DE; padding: 24px 0; }
+    .phone-frame {
+      min-height: calc(100vh - 48px);
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(22,51,44,0.18);
+      overflow: hidden;
+    }
+  }
 </style>
 </head>
 <body>
@@ -287,7 +318,7 @@ function TabBar({ active, onChange }) {
         { key: "exchanges", label: "Échanges", icon: Icon.Chat },
         { key: "profile", label: "Profil", icon: Icon.User },
     ];
-    return (React.createElement("div", { style: { position: "absolute", bottom: 0, left: 0, right: 0, background: COLORS.cream, borderTop: `1px solid ${COLORS.sageDeep}`, display: "flex", padding: "10px 6px 14px" } }, tabs.map((t) => {
+    return (React.createElement("div", { style: { background: COLORS.cream, borderTop: `1px solid ${COLORS.sageDeep}`, display: "flex", padding: "10px 6px 14px", flexShrink: 0 } }, tabs.map((t) => {
         const I = t.icon;
         const isActive = active === t.key;
         return (React.createElement("button", { key: t.key, onClick: () => onChange(t.key), style: { flex: 1, background: "none", border: "none", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, cursor: "pointer", color: isActive ? COLORS.forest : "#9AA69E" } },
@@ -317,9 +348,9 @@ function App() {
     else {
         content = React.createElement(HomeScreen, { onSearch: () => { setTab("search"); setView("search"); } });
     }
-    return (React.createElement("div", { style: { minHeight: "100vh", background: "#DCE4DE", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, fontFamily: FONTS.body } },
-        React.createElement("div", { style: { width: 390, maxWidth: "100%", height: 780, maxHeight: "90vh", background: COLORS.sage, borderRadius: 40, border: `8px solid ${COLORS.ink}`, position: "relative", overflow: "hidden", boxShadow: "0 30px 60px rgba(22,51,44,0.35)" } },
-            React.createElement("div", { style: { height: "100%", overflowY: "auto" } }, content),
+    return (React.createElement("div", { className: "app-shell" },
+        React.createElement("div", { className: "phone-frame" },
+            React.createElement("div", { style: { flex: 1, overflowY: "auto" } }, content),
             React.createElement(TabBar, { active: tab, onChange: goTab }))));
 }
 ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App, null));
